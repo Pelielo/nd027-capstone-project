@@ -9,7 +9,8 @@ import helpers
 class CapstonePlugin(AirflowPlugin):
     name = "capstone_plugin"
     operators = [
-        operators.LoadS3
+        operators.LoadS3,
+        operators.DownloadAndUnzip
     ]
     # helpers = [
     #     helpers.SqlQueries

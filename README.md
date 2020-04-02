@@ -13,3 +13,7 @@ US city recomendation system
   * https://kilthub.cmu.edu/articles/Compiled_daily_temperature_and_precipitation_data_for_the_U_S_cities/7890488
 * Safety
 * cost of living, housing indicators, health care, traffic, crime and pollution.
+  
+## Getting Started
+
+* add connections to airflow (s3,)

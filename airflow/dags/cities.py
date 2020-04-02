@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 import os
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
-from airflow.operators import LoadS3
+from airflow.operators import (LoadS3, DownloadAndUnzip)
 
 
 default_args = {
@@ -24,6 +24,13 @@ dag = DAG('cities',
 
 start_operator = DummyOperator(task_id='Begin_execution',  dag=dag)
 
+download_and_unizp_csv = DownloadAndUnzip(
+    task_id='download_and_unzip',
+    dag=dag,
+    url='https://simplemaps.com/static/data/us-cities/1.6/basic/simplemaps_uscities_basicv1.6.zip',
+    files_to_extract=['uscities.csv']
+)
+
 upload_to_s3 = LoadS3(
     task_id='load_s3',
     dag=dag,
@@ -36,4 +43,4 @@ upload_to_s3 = LoadS3(
 
 end_operator = DummyOperator(task_id='Stop_execution',  dag=dag)
 
-start_operator >> upload_to_s3 >> end_operator
+start_operator >> download_and_unizp_csv >> upload_to_s3 >> end_operator
