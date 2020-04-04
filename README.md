@@ -17,3 +17,4 @@ US city recomendation system
 ## Getting Started
 
 * add connections to airflow (s3,)
+* add variable api key

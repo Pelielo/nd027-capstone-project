@@ -8,12 +8,14 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.operators import LoadS3
 import json
 from airflow import AirflowException
+from airflow.models import Variable
+import logging
 
 
 default_args = {
     "owner": "pelielo",
     "depends_on_past": False,
-    "start_date": datetime(2020, 1, 1),
+    "start_date": datetime(2019, 5, 1),
     "retries": 3,
     "retry_delay": timedelta(minutes=5),
     "catchup": False,
@@ -25,15 +27,17 @@ dag = DAG(
     "employment",
     default_args=default_args,
     description="Loads data to S3 and processes it via Spark into Redshift",
-    schedule_interval="@once",
+    schedule_interval="@monthly",
 )
 
 
 def job(ds, **kwargs):
     reference_date = parse(ds).date()
 
-    start_year = "2019"
-    end_year = "2020"
+    start_year = reference_date.year
+    end_year = reference_date.year
+
+    bls_api_key = Variable.get("bls_api_key")
 
     prefix = "SM"  # State and Area Employment
     seasonal_adjustment_code = "U"
@@ -55,39 +59,50 @@ def job(ds, **kwargs):
             )
         ]
 
-    print(series_id)
-
     url = "https://api.bls.gov/publicAPI/v2/timeseries/data/"
-    payload = {"seriesid": series_id, "startyear": start_year, "endyear": end_year}
+    payload = {
+        "seriesid": series_id, 
+        "startyear": start_year, 
+        "endyear": end_year,
+        "catalog": True,
+        "calculations": True,
+        "registrationkey": bls_api_key
+        }
     headers = {"Content-type": "application/json"}
 
-    print(payload)
+    logging.info(f"Sending request to url {url} with payload {payload}")
     response = requests.request("POST", url, headers=headers, data=json.dumps(payload))
 
-    print(response.status_code)
+    logging.info(f"Request returned with status code {response.status_code}")
     if response.status_code != 200:
         raise AirflowException
 
-    with open("employment.json", "w") as outfile:
+    filename = f"employment{reference_date.year}{reference_date.month:02d}.json"
+
+    logging.info(f"Writing {filename} to filesystem")
+    with open(filename, "w") as outfile:
         json.dump(json.loads(response.text), outfile)
 
 
 start_operator = DummyOperator(task_id="Begin_execution", dag=dag)
 
 http_request = PythonOperator(
-    task_id="http_request", dag=dag, python_callable=job, provide_context=True
+    task_id="http_request", 
+    dag=dag, 
+    python_callable=job, 
+    provide_context=True
 )
 
 upload_to_s3 = LoadS3(
     task_id="load_s3",
     dag=dag,
-    filename="uscities.csv",
+    filename="employment{execution_date.year}{execution_date.month:02d}.json",
     s3_credentials_id="s3_conn",
     s3_bucket="dend-bucket-2a95",
-    s3_key="capstone-project/uscities.csv",
+    s3_key="capstone-project/employment/{execution_date.year}{execution_date.month:02d}/employment{execution_date.year}{execution_date.month:02d}.json",
 )
 
 
 end_operator = DummyOperator(task_id="Stop_execution", dag=dag)
 
-start_operator >> http_request >> end_operator
+start_operator >> http_request >> upload_to_s3 >> end_operator

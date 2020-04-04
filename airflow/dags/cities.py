@@ -37,7 +37,7 @@ upload_to_s3 = LoadS3(
     filename="uscities.csv",
     s3_credentials_id="s3_conn",
     s3_bucket="dend-bucket-2a95",
-    s3_key="capstone-project/uscities.csv"
+    s3_key="capstone-project/cities/uscities.csv"
 )
 
 

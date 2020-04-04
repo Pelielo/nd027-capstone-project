@@ -9,7 +9,7 @@ class LoadS3(BaseOperator):
     
     ui_color = '#03f4fc'
 
-    # template_fields = ("s3_key",)
+    template_fields = ("filename","s3_key")
 
     @apply_defaults
     def __init__(self,
@@ -26,12 +26,14 @@ class LoadS3(BaseOperator):
         self.s3_key = s3_key
 
     def execute(self, context):
+        rendered_filename = self.filename.format(**context)
+        rendered_s3_key = self.s3_key.format(**context)
 
-        s3_path = "s3://{}/{}".format(self.s3_bucket, self.s3_key)
-        self.log.info(f"Uploading file {self.filename} to {s3_path}")
+        s3_path = "s3://{}/{}".format(self.s3_bucket, rendered_s3_key)
+        self.log.info(f"Uploading file {rendered_filename} to {s3_path}")
 
         s3 = S3Hook(self.s3_credentials_id)
-        s3.load_file(self.filename, self.s3_key, self.s3_bucket, replace=True)
+        s3.load_file(rendered_filename, rendered_s3_key, self.s3_bucket, replace=True)
 
 
 
