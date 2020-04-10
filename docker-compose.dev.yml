@@ -10,6 +10,8 @@ services:
       options:
         max-size: 10m
         max-file: "3"
+    volumes:
+      - ~/dev/airflow_db:/var/lib/postgresql/data
     ports:
       - "5432:5432"
 
@@ -27,6 +29,7 @@ services:
     environment:
       - LOAD_EX=n
       - EXECUTOR=Local
+      - PYSPARK_PYTHON=python3
     volumes:
       - ./airflow/dags:/usr/local/airflow/dags
       - ./airflow/plugins:/usr/local/airflow/plugins

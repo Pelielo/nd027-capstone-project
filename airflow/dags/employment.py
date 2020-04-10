@@ -15,7 +15,7 @@ import logging
 default_args = {
     "owner": "pelielo",
     "depends_on_past": False,
-    "start_date": datetime(2019, 5, 1),
+    "start_date": datetime(2019, 10, 1),
     "retries": 3,
     "retry_delay": timedelta(minutes=5),
     "catchup": False,
@@ -41,7 +41,7 @@ def job(ds, **kwargs):
 
     prefix = "SM"  # State and Area Employment
     seasonal_adjustment_code = "U"
-    state_codes = ["01", "02", "04", "05", "06", "08", "09", "10", "12", "13", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "44", "45", "46", "47", "48", "49", "50", "51", "53", "54", "55", "56"]
+    state_codes = ["01","02","04","05","06","08","09","10","12","13","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","44","45","46","47","48","49","50","51","53","54","55","56"]
     area_code = "00000"  # State-wide
     supersector_industry_code = "00000000"  # Total non-farm
     data_type_code = "01"  # All Employees, In Thousands
@@ -61,13 +61,13 @@ def job(ds, **kwargs):
 
     url = "https://api.bls.gov/publicAPI/v2/timeseries/data/"
     payload = {
-        "seriesid": series_id, 
-        "startyear": start_year, 
+        "seriesid": series_id,
+        "startyear": start_year,
         "endyear": end_year,
         "catalog": True,
         "calculations": True,
-        "registrationkey": bls_api_key
-        }
+        "registrationkey": bls_api_key,
+    }
     headers = {"Content-type": "application/json"}
 
     logging.info(f"Sending request to url {url} with payload {payload}")
@@ -87,10 +87,7 @@ def job(ds, **kwargs):
 start_operator = DummyOperator(task_id="Begin_execution", dag=dag)
 
 http_request = PythonOperator(
-    task_id="http_request", 
-    dag=dag, 
-    python_callable=job, 
-    provide_context=True
+    task_id="http_request", dag=dag, python_callable=job, provide_context=True
 )
 
 upload_to_s3 = LoadS3(
@@ -98,7 +95,7 @@ upload_to_s3 = LoadS3(
     dag=dag,
     filename="employment{execution_date.year}{execution_date.month:02d}.json",
     s3_credentials_id="s3_conn",
-    s3_bucket="dend-bucket-2a95",
+    s3_bucket="udacity-dend-14b1",
     s3_key="capstone-project/employment/{execution_date.year}{execution_date.month:02d}/employment{execution_date.year}{execution_date.month:02d}.json",
 )
 

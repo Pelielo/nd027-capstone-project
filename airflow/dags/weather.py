@@ -63,9 +63,9 @@ download_dataset_and_unizp = PythonOperator(
 upload_to_s3 = LoadS3(
     task_id="load_s3",
     dag=dag,
-    filename="weather.csv",
+    filename="GlobalLandTemperaturesByCity.csv",
     s3_credentials_id="s3_conn",
-    s3_bucket="dend-bucket-2a95",
+    s3_bucket="udacity-dend-14b1",
     s3_key="capstone-project/weather/weather.csv",
 )
 

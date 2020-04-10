@@ -16,5 +16,5 @@ US city recomendation system
   
 ## Getting Started
 
-* add connections to airflow (s3,)
-* add variable api key
+* add connections to airflow (s3_conn,aws_credentials)
+* add variables to airflow (kaggle_username, kaggle_api_key, bls_api_key)
