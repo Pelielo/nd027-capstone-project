@@ -1,16 +1,21 @@
-from datetime import datetime, timedelta
+import json
+import logging
 import os
-from dateutil.parser import parse
+from datetime import datetime, timedelta
+
+import pyspark.sql.functions as F
 import requests
-from airflow import DAG
+from dateutil.parser import parse
+from pyspark import SparkConf
+from pyspark.sql import SparkSession
+from pyspark.sql.types import (DecimalType, IntegerType)
+
+from airflow import DAG, AirflowException
+from airflow.contrib.hooks.aws_hook import AwsHook
+from airflow.models import Variable
+from airflow.operators import LoadS3
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
-from airflow.operators import LoadS3
-import json
-from airflow import AirflowException
-from airflow.models import Variable
-import logging
-
 
 default_args = {
     "owner": "pelielo",
@@ -31,7 +36,7 @@ dag = DAG(
 )
 
 
-def job(ds, **kwargs):
+def http_job(ds, **kwargs):
     reference_date = parse(ds).date()
 
     start_year = reference_date.year
@@ -84,10 +89,50 @@ def job(ds, **kwargs):
         json.dump(json.loads(response.text), outfile)
 
 
+def spark_job(ds, **kwargs):
+
+    os.environ["AWS_ACCESS_KEY_ID"] = AwsHook("aws_credentials").get_credentials().access_key
+    os.environ["AWS_SECRET_ACCESS_KEY"] = AwsHook("aws_credentials").get_credentials().secret_key
+
+    conf = (
+        SparkConf()
+        .setAppName("employment_processor")
+        .setMaster("spark://spark-master:7077")
+        .set("spark.jars.packages", "org.apache.hadoop:hadoop-aws:2.7.0")
+    )
+
+    def create_spark_session():
+        spark = SparkSession.builder.config(conf=conf).getOrCreate()
+        return spark
+
+    spark = create_spark_session()
+
+    input_data_path = "s3a://udacity-dend-14b1/capstone-project/"
+    # input_data_path = "data/"
+    # output_data_path = "s3a://udacity-dend-14b1/output_data_project4/"
+    # output_data_path = "output_data/"
+
+    # get path to employment data file
+    reference_date = parse(ds).date()
+    employment_data_path = f"employment/{reference_date.year}{reference_date.month:02d}/employment{reference_date.year}{reference_date.month:02d}.json"
+
+    # read employment data file
+    df = spark.read.json(input_data_path + employment_data_path)
+    series_df = df.select(F.explode(df.Results.series).alias("series"))
+    state_data_df = series_df.select(series_df.series.catalog.area.alias("state"), F.explode(series_df.series.data).alias("data"))
+    employment_df = state_data_df.select(
+        state_data_df.state,
+        state_data_df.data.year.alias("year"),
+        (state_data_df.data.period)[2:3].cast(IntegerType()).alias("month"),
+        ((((state_data_df.data.value))).cast(DecimalType()) * 1000).alias("employment_count"))
+
+    employment_df.show()
+
+
 start_operator = DummyOperator(task_id="Begin_execution", dag=dag)
 
 http_request = PythonOperator(
-    task_id="http_request", dag=dag, python_callable=job, provide_context=True
+    task_id="http_request", dag=dag, python_callable=http_job, provide_context=True
 )
 
 upload_to_s3 = LoadS3(
@@ -99,7 +144,14 @@ upload_to_s3 = LoadS3(
     s3_key="capstone-project/employment/{execution_date.year}{execution_date.month:02d}/employment{execution_date.year}{execution_date.month:02d}.json",
 )
 
+spark_processor = PythonOperator(
+    task_id="spark_processor",
+    dag=dag,
+    python_callable=spark_job,
+    provide_context=True
+)
+
 
 end_operator = DummyOperator(task_id="Stop_execution", dag=dag)
 
-start_operator >> http_request >> upload_to_s3 >> end_operator
+start_operator >> http_request >> upload_to_s3 >> spark_processor >> end_operator
