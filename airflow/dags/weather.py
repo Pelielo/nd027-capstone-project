@@ -76,8 +76,8 @@ def spark_job():
 
     conf = (
         SparkConf()
-        .setAppName("employment_processor")
-        .setMaster("spark://spark-master:7077")
+        .setAppName("weather_processor")
+        .setMaster("spark://spark-master:7077")  # TODO change to connection
         .set("spark.jars.packages", "org.apache.hadoop:hadoop-aws:2.7.0")
     )
 
@@ -134,7 +134,7 @@ def spark_job():
         cleaned_df.latitude.alias("tmp_lat"), cleaned_df.longitude.alias("tmp_long")
     ).dropDuplicates()
 
-    # remove limit
+    # TODO remove limit
     enriched_df = location_df.limit(5).withColumn(
         "state", location_enricher_udf(location_df.tmp_lat, location_df.tmp_long)
     )
@@ -149,6 +149,7 @@ def spark_job():
     ).drop("tmp_lat", "tmp_long")
 
     weather_df.show()
+
 
 start_operator = DummyOperator(task_id="Begin_execution", dag=dag)
 

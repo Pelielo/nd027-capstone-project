@@ -1,2 +1,6 @@
 settings.cfg
 __pycache__/
+data/
+/.ipynb_checkpoints
+/.vscode
+*.ipynb

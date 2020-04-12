@@ -97,7 +97,7 @@ def spark_job(ds, **kwargs):
     conf = (
         SparkConf()
         .setAppName("employment_processor")
-        .setMaster("spark://spark-master:7077")
+        .setMaster("spark://spark-master:7077")  # TODO change to connection
         .set("spark.jars.packages", "org.apache.hadoop:hadoop-aws:2.7.0")
     )
 
@@ -124,7 +124,7 @@ def spark_job(ds, **kwargs):
         state_data_df.state,
         state_data_df.data.year.alias("year"),
         (state_data_df.data.period)[2:3].cast(IntegerType()).alias("month"),
-        ((((state_data_df.data.value))).cast(DecimalType()) * 1000).alias("employment_count"))
+        ((((state_data_df.data.value))).cast(DecimalType()) * 1000).alias("people_employed"))
 
     employment_df.show()
 

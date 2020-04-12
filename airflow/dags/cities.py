@@ -38,7 +38,7 @@ def spark_job(ds, **kwargs):
     conf = (
         SparkConf()
         .setAppName("cities_processor")
-        .setMaster("spark://spark-master:7077")
+        .setMaster("spark://spark-master:7077")  # TODO change to connection
         .set("spark.jars.packages", "org.apache.hadoop:hadoop-aws:2.7.0")
     )
 
@@ -63,11 +63,11 @@ def spark_job(ds, **kwargs):
         df.selectExpr(
             "city_ascii as city",
             "state_name as state",
-            "state_id",
-            "'United States' as country",
+            "state_code",
+            "'United States of America' as country",
             "lat as latitude",
             "lng as longitude",
-            "density",
+            "density",  # population per square kilometer
         )
         .filter(
             col("state_name").isin(["Puerto Rico", "District of Columbia"]) == False
