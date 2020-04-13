@@ -12,9 +12,14 @@ from pyspark.sql.types import (DecimalType, IntegerType)
 from airflow import DAG, AirflowException
 from airflow.contrib.hooks.aws_hook import AwsHook
 from airflow.models import Variable
-from airflow.operators import LoadS3, CopyToRedshiftOperator
+from airflow.operators import LoadS3, CopyToRedshiftOperator, DataQualityOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
+
+EMPLOYMENT_VALIDATION = {
+    "query": "select count(*) from dim_cities where people_employed is null",
+    "result": 0,
+}
 
 default_args = {
     "owner": "pelielo",
@@ -199,6 +204,13 @@ copy_redshift = CopyToRedshiftOperator(
     s3_key="capstone-project/employment/{execution_date.year}{execution_date.month:02d}/employment{execution_date.year}{execution_date.month:02d}-processed.csv",
 )
 
+quality_checks = DataQualityOperator(
+    task_id="data_quality_checks",
+    dag=dag,
+    redshift_conn_id="redshift",
+    queries_and_results=[EMPLOYMENT_VALIDATION],
+)
+
 end_operator = DummyOperator(task_id="Stop_execution", dag=dag)
 
-start_operator >> http_request >> upload_to_s3_raw >> spark_processor >> upload_to_s3_processed >> copy_redshift >> end_operator
+start_operator >> http_request >> upload_to_s3_raw >> spark_processor >> upload_to_s3_processed >> copy_redshift >> quality_checks >> end_operator

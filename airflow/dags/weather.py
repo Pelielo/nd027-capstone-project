@@ -12,7 +12,7 @@ from pyspark.sql.types import DoubleType
 from airflow import DAG
 from airflow.contrib.hooks.aws_hook import AwsHook
 from airflow.models import Variable
-from airflow.operators import LoadS3, CopyToRedshiftOperator
+from airflow.operators import LoadS3, CopyToRedshiftOperator, DataQualityOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
 
@@ -20,6 +20,11 @@ os.environ["KAGGLE_USERNAME"] = Variable.get("kaggle_username")
 os.environ["KAGGLE_KEY"] = Variable.get("kaggle_api_key")
 
 import kaggle  # uses KAGGLE_USERNAME and KAGGLE_KEY
+
+WEATHER_VALIDATION = {
+    "query": "select count(*) from fact_weather where avg_temp is null",
+    "result": 0,
+}
 
 default_args = {
     "owner": "pelielo",
@@ -235,6 +240,13 @@ copy_redshift = CopyToRedshiftOperator(
     s3_key="capstone-project/weather/usweather-processed.csv",
 )
 
+quality_checks = DataQualityOperator(
+    task_id="data_quality_checks",
+    dag=dag,
+    redshift_conn_id="redshift",
+    queries_and_results=[WEATHER_VALIDATION],
+)
+
 end_operator = DummyOperator(task_id="Stop_execution", dag=dag)
 
-start_operator >> download_dataset_and_unizp >> upload_to_s3_raw >> spark_processor >> upload_to_s3_processed >> copy_redshift >> end_operator
+start_operator >> download_dataset_and_unizp >> upload_to_s3_raw >> spark_processor >> upload_to_s3_processed >> copy_redshift >> quality_checks >> end_operator

@@ -11,7 +11,8 @@ class CapstonePlugin(AirflowPlugin):
     operators = [
         operators.LoadS3,
         operators.DownloadAndUnzip,
-        operators.CopyToRedshiftOperator
+        operators.CopyToRedshiftOperator,
+        operators.DataQualityOperator
     ]
     # helpers = [
     #     helpers.SqlQueries

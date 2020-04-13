@@ -7,9 +7,19 @@ from pyspark.sql.functions import col
 
 from airflow import DAG
 from airflow.contrib.hooks.aws_hook import AwsHook
-from airflow.operators import CopyToRedshiftOperator, DownloadAndUnzip, LoadS3
+from airflow.operators import (
+    CopyToRedshiftOperator,
+    DownloadAndUnzip,
+    LoadS3,
+    DataQualityOperator,
+)
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
+
+CITIES_VALIDATION = {
+    "query": "select count(*) from dim_cities where city is null",
+    "result": 0,
+}
 
 default_args = {
     "owner": "pelielo",
@@ -83,7 +93,8 @@ def spark_job(ds, **kwargs):
             "density",  # population per square kilometer
         )
         .filter(
-            col("state_name").isin(["Puerto Rico", "District of Columbia"]) == False  # using only the 50 states
+            col("state_name").isin(["Puerto Rico", "District of Columbia"])
+            == False  # using only the 50 states
         )
         .dropDuplicates()
     )
@@ -140,6 +151,13 @@ copy_redshift = CopyToRedshiftOperator(
     s3_key="capstone-project/cities/uscities-processed.csv",
 )
 
+quality_checks = DataQualityOperator(
+    task_id="data_quality_checks",
+    dag=dag,
+    redshift_conn_id="redshift",
+    queries_and_results=[CITIES_VALIDATION],
+)
+
 end_operator = DummyOperator(task_id="Stop_execution", dag=dag)
 
-start_operator >> download_and_unizp_csv >> upload_to_s3_raw >> spark_processor >> upload_to_s3_processed >> copy_redshift >> end_operator
+start_operator >> download_and_unizp_csv >> upload_to_s3_raw >> spark_processor >> upload_to_s3_processed >> copy_redshift >> quality_checks >> end_operator
