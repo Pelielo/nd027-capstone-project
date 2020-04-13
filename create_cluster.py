@@ -170,9 +170,9 @@ def main():
 
     DWH_IAM_ROLE_NAME = config.get("CLUSTER", "IAM_ROLE_NAME")
 
-    redshift = create_client("redshift", "us-west-2", KEY, SECRET)
-    iam = create_client("iam", "us-west-2", KEY, SECRET)
-    ec2 = create_resource("ec2", "us-west-2", KEY, SECRET)
+    redshift = create_client("redshift", "us-east-1", KEY, SECRET)
+    iam = create_client("iam", "us-east-1", KEY, SECRET)
+    ec2 = create_resource("ec2", "us-east-1", KEY, SECRET)
 
     roleArn = create_iam_role(iam, DWH_IAM_ROLE_NAME)
 

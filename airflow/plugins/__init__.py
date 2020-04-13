@@ -1,16 +1,17 @@
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import, division, print_function
 
+import helpers
+import operators
 from airflow.plugins_manager import AirflowPlugin
 
-import operators
-import helpers
 
 # Defining the plugin class
 class CapstonePlugin(AirflowPlugin):
     name = "capstone_plugin"
     operators = [
         operators.LoadS3,
-        operators.DownloadAndUnzip
+        operators.DownloadAndUnzip,
+        operators.CopyToRedshiftOperator
     ]
     # helpers = [
     #     helpers.SqlQueries

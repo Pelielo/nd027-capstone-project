@@ -1,23 +1,40 @@
-from airflow.contrib.hooks.aws_hook import AwsHook
-from airflow.hooks.postgres_hook import PostgresHook
 from airflow.hooks.S3_hook import S3Hook
 from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
-import boto3
+
 
 class LoadS3(BaseOperator):
-    
-    ui_color = '#03f4fc'
+    """
+    Custom Airflow Operator to load a file from the local filesystem to a S3 Bucket.
 
-    template_fields = ("filename","s3_key")
+    :param filename: name of the source file. Can be formatted used Airflow `context`.
+    :type filename: str
+
+    :param s3_credentials_id: Connection to S3 containing Access Key and Secret Key.
+        Must be configured as a S3 Connection via the Airflow webserver UI.
+    :type s3_credentials_id: str
+
+    :param s3_bucket: Name of the source S3 bucket.
+    :type s3_bucket: str
+
+    :param s3_key: Remaining path to the source file in S3.
+    :type s3_key: str
+    """
+
+    ui_color = "#03f4fc"
+
+    template_fields = ("filename", "s3_key")
 
     @apply_defaults
-    def __init__(self,
-                 filename="",
-                 s3_credentials_id="",
-                 s3_bucket="",
-                 s3_key="",
-                 *args, **kwargs):
+    def __init__(
+        self,
+        filename="",
+        s3_credentials_id="",
+        s3_bucket="",
+        s3_key="",
+        *args,
+        **kwargs,
+    ):
 
         super(LoadS3, self).__init__(*args, **kwargs)
         self.filename = filename
@@ -34,7 +51,3 @@ class LoadS3(BaseOperator):
 
         s3 = S3Hook(self.s3_credentials_id)
         s3.load_file(rendered_filename, rendered_s3_key, self.s3_bucket, replace=True)
-
-
-
-
