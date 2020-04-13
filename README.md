@@ -90,12 +90,20 @@ The data model chosen to represent the data processed by the pipeline is a star 
 * `fact_weather` uses `distkey` on `state`, since queries will mostly be made against cities and states  and `sortkey` on `date` to be able to filter certain dates and make aggregations more performant.
 * `fact_employment` uses `distkey` on `state` and a `compound sortkey` on `(year, month)` for similiar reasons as `fact_weather`.
 
-Therefore, this model can scale well when the data intake is increased, as queries will almost always use one or a few Redshift nodes. It also takes into account the number of concurrent access it needs to handle, since Redshift nodes can ditribute the processing into its nodes for each request.
+![Star Schema](./resources/table_schema.png)
+
+## Scaling Data volume
+
+The architecture chosen can scale well, as the tables are distributed in a way to reduce the number of partitions read by each query. It also takes into account the number of concurrent access it needs to handle, since Redshift can ditribute the processing into its nodes for each request.
 
 Spark can handle the volume increase as well, using parallel processing by following a similar distribution logic as the Redshift tables.
 
-![Star Schema](./resources/table_schema.png)
-
+* **Increasing data by 100x**
+  * If the data intake was increased by 100x, it would be wise to use **Parquet** files and partition the data stored into **S3** so that Spark can parallelize the processing. Airflow could fetch the data more frequently to disperse the processing over time and therefore soften both concentrated reads and writes. The table model would not need too much changes, since it can easily store and provide access to much more data than it currently holds using the sort methods and distrubution styles chosen.
+* **Running the data pipeline daily at 7 am**
+  * If the pipeline was run daily, it would still work as expected, since Spark would process the daily amount of data and Redshift would receive the data normally. If for some reason there is an error during the execution of the DAG, each task can retry **3** times before the DAG failing. If it does fail, a dashboard consuming the data from Redshift would not fail to render, but would not have the most up to date information, showing only the data from the day before.
+* **Handling 100+ people connecting to the database**
+  * If the number of people connected concurrently to the database increased to 100+, a possible strategy to soften the hit on the reads would be to provide **a single or few points of connection**, for example a dashboard that handles certain queries.
 
 ## Future Work
 
