@@ -15,6 +15,7 @@ cities_table_create = """
         country varchar not null,
         latitude double precision not null,
         longitude double precision not null,
+        population int not null,
         density double precision null,
         primary key (city_id)
     )

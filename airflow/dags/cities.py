@@ -90,6 +90,7 @@ def spark_job(ds, **kwargs):
             "'United States of America' as country",
             "lat as latitude",
             "lng as longitude",
+            "population"
             "density",  # population per square kilometer
         )
         .filter(
@@ -146,7 +147,7 @@ copy_redshift = CopyToRedshiftOperator(
     redshift_conn_id="redshift",
     aws_credentials_id="aws_credentials",
     table="dim_cities",
-    column_list="city, state, state_code, country, latitude, longitude, density",
+    column_list="city, state, state_code, country, latitude, longitude, population, density",
     s3_bucket="udacity-dend-14b1",
     s3_key="capstone-project/cities/uscities-processed.csv",
 )
